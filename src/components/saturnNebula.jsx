@@ -57,6 +57,10 @@ const SaturnNebula = () => {
       darkTeal: new THREE.Color(0x0f3d4a),        // Dark teal
       blueGreen: new THREE.Color(0x0d4d4a),       // Blue-green
       darkCyan: new THREE.Color(0x0a3d3d),        // Dark cyan
+      mintGreen: new THREE.Color(0x66e6b3),       // Minty green
+      lightPink: new THREE.Color(0xffbfd6),       // Light pink
+      rosePink: new THREE.Color(0xf299bf),        // Rose pink
+      softMint: new THREE.Color(0x80ffcc),        // Soft mint
     };
 
     // ==================== SATURN PLANET ====================
@@ -93,6 +97,10 @@ const SaturnNebula = () => {
             vec3 mintGreen = vec3(0.4, 0.9, 0.7);     // Minty green
             vec3 lightBlue = vec3(0.5, 0.7, 0.9);     // Light blue
             vec3 purple = vec3(0.6, 0.4, 0.8);        // Purple accent
+            vec3 lightPink = vec3(1.0, 0.75, 0.85);   // Light pink for poles
+            vec3 rosePink = vec3(0.95, 0.6, 0.75);    // Rose pink for bands
+            vec3 softPink = vec3(0.9, 0.7, 0.8);      // Soft pink
+            vec3 minorOrange = vec3(1.0, 0.7, 0.4);   // Minor orange accent
             
             // Create horizontal bands based on latitude
             float latitude = vUv.y;
@@ -107,9 +115,37 @@ const SaturnNebula = () => {
             // Mix the band colors
             vec3 color = mix(deepBlue, mintGreen, bandPattern);
             color = mix(color, lightBlue, bandPattern2 * 0.5);
+            // Add more minty green throughout
+            color = mix(color, mintGreen, noise2 * 0.3);
+            // Add pink bands
+            color = mix(color, rosePink, bandPattern * 0.35);
+            color = mix(color, softPink, noise1 * 0.25);
+            // Add minor orange accents
+            color = mix(color, minorOrange, (noise1 * noise2) * 0.18);
             // Add subtle purple accents
             color = mix(color, purple, noise2 * 0.15);
             color += vec3(combinedNoise * 0.1);
+            
+            // Add solid light pink to the poles (top and bottom)
+            float northPole = smoothstep(0.82, 0.92, latitude);  // Top of planet
+            float southPole = smoothstep(0.18, 0.08, latitude);  // Bottom of planet
+            float poleInfluence = northPole + southPole;
+            
+            // Add patterns to the pink poles
+            float polePattern1 = sin(vUv.x * 30.0 + time * 0.3) * 0.5 + 0.5;
+            float polePattern2 = sin(vUv.x * 50.0 - time * 0.2) * 0.5 + 0.5;
+            float polePattern = mix(polePattern1, polePattern2, 0.5) * 0.15;
+            
+            // Add subtle pink sparkles
+            float sparkle = sin(vUv.x * 60.0 + time * 1.5) * sin(vUv.y * 50.0 - time * 1.2);
+            sparkle = pow(max(sparkle, 0.0), 8.0) * 0.15;  // Very subtle sparkle
+            
+            // Create solid pink poles with patterns
+            vec3 pinkWithPattern = lightPink + vec3(polePattern);
+            pinkWithPattern += vec3(sparkle * 0.3, sparkle * 0.2, sparkle * 0.25);  // Subtle pink sparkle
+            
+            // Apply solid pink to poles
+            color = mix(color, pinkWithPattern, poleInfluence * 0.95);
             
             // Add lighting based on normal
             vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
@@ -776,7 +812,7 @@ const SaturnNebula = () => {
     const fullscreenNebula = createFullscreenNebula();
     const nebulae = createNebulaClouds();
     const saturn = createSaturn();
-    const shootingStars = Array.from({ length: 20 }, () => new ShootingStarTowardsUser(scene, camera, nebulaColors));
+    const shootingStars = Array.from({ length: 50 }, () => new ShootingStarTowardsUser(scene, camera, nebulaColors));
 
     // ==================== ANIMATION LOOP ====================
     let time = 0;
@@ -838,7 +874,7 @@ const SaturnNebula = () => {
       });
       
       shootingStarTimer += delta;
-      if (shootingStarTimer > 1.5 && Math.random() < 0.03) {
+      if (shootingStarTimer > 0.8 && Math.random() < 0.08) {
         const inactive = shootingStars.find(s => !s.active);
         if (inactive) {
           inactive.trigger();
