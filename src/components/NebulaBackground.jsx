@@ -8,9 +8,12 @@ const NebulaBackground = () => {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Detect mobile device for optimization
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
     // ==================== SCENE SETUP ====================
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0520, 0.00015);
+    scene.fog = new THREE.FogExp2(0x0a0520, isMobile ? 0.0003 : 0.00015);
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -20,9 +23,13 @@ const NebulaBackground = () => {
     );
     camera.position.set(0, 0, 100);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: !isMobile, 
+      alpha: false,
+      powerPreference: isMobile ? 'low-power' : 'high-performance'
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     containerRef.current.appendChild(renderer.domElement);
@@ -61,7 +68,7 @@ const NebulaBackground = () => {
 
     // ==================== POINTY STAR SYSTEM ====================
     function createPointyStars() {
-      const starCount = 12000;
+      const starCount = isMobile ? 2000 : 12000; // 83% fewer stars on mobile
       const geometry = new THREE.BufferGeometry();
       
       const positions = new Float32Array(starCount * 3);
@@ -390,9 +397,14 @@ const NebulaBackground = () => {
       const nebulae = [];
       const colorKeys = Object.keys(nebulaColors);
       
-      for (let i = 0; i < 8; i++) {
+      // Fewer clouds on mobile
+      const cloudCount = isMobile ? 3 : 8;
+      
+      for (let i = 0; i < cloudCount; i++) {
         const size = 800 + Math.random() * 1200;
-        const geometry = new THREE.PlaneGeometry(size, size, 64, 64);
+        // Simpler geometry on mobile
+        const segments = isMobile ? 16 : 64;
+        const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
         
         const colorIndex = Math.floor(Math.random() * colorKeys.length);
         const baseColor = nebulaColors[colorKeys[colorIndex]];
@@ -651,15 +663,22 @@ const NebulaBackground = () => {
     const fullscreenNebula = createFullscreenNebula();
     const nebulae = createNebulaClouds();
     // Saturn removed
-    const shootingStars = Array.from({ length: 20 }, () => new ShootingStarTowardsUser(scene, camera, nebulaColors));
+    // Fewer shooting stars on mobile
+    const shootingStarCount = isMobile ? 10 : 20;
+    const shootingStars = Array.from({ length: shootingStarCount }, () => new ShootingStarTowardsUser(scene, camera, nebulaColors));
 
     // ==================== ANIMATION LOOP ====================
     let time = 0;
     let shootingStarTimer = 0;
     const clock = new THREE.Clock();
+    let frameCount = 0;
 
     function animate() {
       animationFrameRef.current = requestAnimationFrame(animate);
+      
+      frameCount++;
+      // Skip every other frame on mobile for 30fps instead of 60fps
+      if (isMobile && frameCount % 2 !== 0) return;
       
       const delta = clock.getDelta();
       time += delta;
