@@ -311,7 +311,7 @@ body {
   }
 
   .mobile-nav-logo {
-    margin-top: 20px;
+    margin-top: 3px;
     margin-bottom: 3rem;
     animation: bounce-glow 2s ease-in-out infinite;
   }

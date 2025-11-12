@@ -73,6 +73,10 @@ const SaturnNebula = () => {
         uniforms: {
           time: { value: 0 }
         },
+        transparent: true,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
         vertexShader: `
           varying vec3 vNormal;
           varying vec3 vPosition;
@@ -92,15 +96,14 @@ const SaturnNebula = () => {
           varying vec2 vUv;
           
           void main() {
-            // Saturn's color bands - blue, minty green, and minor purple
-            vec3 deepBlue = vec3(0.2, 0.4, 0.8);      // Deep blue
-            vec3 mintGreen = vec3(0.4, 0.9, 0.7);     // Minty green
-            vec3 lightBlue = vec3(0.5, 0.7, 0.9);     // Light blue
-            vec3 purple = vec3(0.6, 0.4, 0.8);        // Purple accent
-            vec3 lightPink = vec3(1.0, 0.75, 0.85);   // Light pink for poles
-            vec3 rosePink = vec3(0.95, 0.6, 0.75);    // Rose pink for bands
-            vec3 softPink = vec3(0.9, 0.7, 0.8);      // Soft pink
-            vec3 minorOrange = vec3(1.0, 0.7, 0.4);   // Minor orange accent
+            // Saturn's color bands - hot pink and light blue
+            vec3 hotPink = vec3(1.0, 0.08, 0.58);        // Hot pink #FF1493
+            vec3 brightPink = vec3(1.0, 0.41, 0.71);     // Bright hot pink
+            vec3 lightBlue = vec3(0.53, 0.81, 0.98);     // Light blue #87CEEB
+            vec3 skyBlue = vec3(0.53, 0.87, 1.0);        // Sky blue
+            vec3 cyan = vec3(0.0, 0.9, 1.0);             // Bright cyan
+            vec3 electricBlue = vec3(0.4, 0.75, 1.0);    // Electric blue
+            vec3 deepPink = vec3(0.95, 0.2, 0.6);        // Deep pink
             
             // Create horizontal bands based on latitude
             float latitude = vUv.y;
@@ -112,63 +115,77 @@ const SaturnNebula = () => {
             float noise2 = sin(vUv.y * 30.0 + vUv.x * 20.0) * 0.5 + 0.5;
             float combinedNoise = noise1 * 0.3 + noise2 * 0.3;
             
-            // Mix the band colors
-            vec3 color = mix(deepBlue, mintGreen, bandPattern);
-            color = mix(color, lightBlue, bandPattern2 * 0.5);
-            // Add more minty green throughout
-            color = mix(color, mintGreen, noise2 * 0.3);
-            // Add pink bands
-            color = mix(color, rosePink, bandPattern * 0.35);
-            color = mix(color, softPink, noise1 * 0.25);
-            // Add minor orange accents
-            color = mix(color, minorOrange, (noise1 * noise2) * 0.18);
-            // Add subtle purple accents
-            color = mix(color, purple, noise2 * 0.15);
-            color += vec3(combinedNoise * 0.1);
+            // Mix hot pink and light blue with strong contrast
+            vec3 color = mix(hotPink, lightBlue, bandPattern * 0.7);
+            color = mix(color, skyBlue, bandPattern2 * 0.6);
+            // Add electric blue accents
+            color = mix(color, electricBlue, noise2 * 0.5);
+            // Add more hot pink bands for vibrancy
+            color = mix(color, brightPink, bandPattern * 0.6);
+            // Add cyan highlights
+            color = mix(color, cyan, noise1 * 0.4);
+            // Add deep pink for depth
+            color = mix(color, deepPink, noise2 * 0.3);
+            color += vec3(combinedNoise * 0.15);
             
-            // Add solid light pink to the poles (top and bottom)
+            // Add hot pink to the poles (top and bottom)
             float northPole = smoothstep(0.82, 0.92, latitude);  // Top of planet
             float southPole = smoothstep(0.18, 0.08, latitude);  // Bottom of planet
             float poleInfluence = northPole + southPole;
             
-            // Add patterns to the pink poles
+            // Add patterns to the poles
             float polePattern1 = sin(vUv.x * 30.0 + time * 0.3) * 0.5 + 0.5;
             float polePattern2 = sin(vUv.x * 50.0 - time * 0.2) * 0.5 + 0.5;
-            float polePattern = mix(polePattern1, polePattern2, 0.5) * 0.15;
+            float polePattern = mix(polePattern1, polePattern2, 0.5) * 0.2;
             
-            // Add subtle pink sparkles
+            // Add bright sparkles
             float sparkle = sin(vUv.x * 60.0 + time * 1.5) * sin(vUv.y * 50.0 - time * 1.2);
-            sparkle = pow(max(sparkle, 0.0), 8.0) * 0.15;  // Very subtle sparkle
+            sparkle = pow(max(sparkle, 0.0), 8.0) * 0.3;
             
-            // Create solid pink poles with patterns
-            vec3 pinkWithPattern = lightPink + vec3(polePattern);
-            pinkWithPattern += vec3(sparkle * 0.3, sparkle * 0.2, sparkle * 0.25);  // Subtle pink sparkle
+            // Create vibrant hot pink poles with patterns
+            vec3 pinkWithPattern = hotPink + vec3(polePattern * 0.2);
+            pinkWithPattern += vec3(sparkle * 0.5, sparkle * 0.6, sparkle * 0.7);  // Blue-tinted sparkle
             
-            // Apply solid pink to poles
-            color = mix(color, pinkWithPattern, poleInfluence * 0.95);
+            // Apply hot pink to poles with strong presence
+            color = mix(color, pinkWithPattern, poleInfluence * 0.9);
             
             // Add lighting based on normal
             vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
             float diff = max(dot(vNormal, lightDir), 0.0);
-            float ambient = 0.3;
-            float lighting = ambient + diff * 0.7;
+            float ambient = 0.5;
+            float lighting = ambient + diff * 0.8;
             
             color *= lighting;
             
-            gl_FragColor = vec4(color, 1.0);
+            // Boost overall brightness
+            color *= 1.4;
+            
+            // Create ghostly transparent effect
+            // Edge glow - brighter at edges for ghostly appearance
+            float edgeFactor = 1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0)));
+            edgeFactor = pow(edgeFactor, 2.0);
+            
+            // Make center more transparent, edges more visible
+            float alpha = 0.35 + edgeFactor * 0.5;
+            
+            // Add ethereal glow
+            color += edgeFactor * 0.3;
+            
+            gl_FragColor = vec4(color, alpha);
           }
         `
       });
       
-      const planet = new THREE.Mesh(planetGeometry, planetMaterial);
-      saturnGroup.add(planet);
-      
-      // Create Saturn's rings
+      // Create Saturn's rings geometry and material first
       const ringGeometry = new THREE.RingGeometry(40, 70, 128);
       const ringMaterial = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0 }
         },
+        transparent: true,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
         vertexShader: `
           varying vec2 vUv;
           varying vec3 vPosition;
@@ -187,21 +204,16 @@ const SaturnNebula = () => {
           void main() {
             float dist = length(vPosition);
             
-            // Create rainbow colors based on distance
+            // Create hot pink and light blue gradient based on distance
+            vec3 hotPink = vec3(1.0, 0.08, 0.58);
+            vec3 lightBlue = vec3(0.53, 0.81, 0.98);
+            vec3 cyan = vec3(0.0, 0.9, 1.0);
+            
             float hue = (dist - 40.0) / 30.0; // Map distance to 0-1 range
-            hue = fract(hue + time * 0.05); // Slowly rotate the rainbow
             
-            // Convert HSV to RGB for rainbow effect
-            vec3 rainbow;
-            float h = hue * 6.0;
-            float x = 1.0 - abs(mod(h, 2.0) - 1.0);
-            
-            if (h < 1.0) rainbow = vec3(1.0, x, 0.0);
-            else if (h < 2.0) rainbow = vec3(x, 1.0, 0.0);
-            else if (h < 3.0) rainbow = vec3(0.0, 1.0, x);
-            else if (h < 4.0) rainbow = vec3(0.0, x, 1.0);
-            else if (h < 5.0) rainbow = vec3(x, 0.0, 1.0);
-            else rainbow = vec3(1.0, 0.0, x);
+            // Mix pink to blue gradient
+            vec3 color = mix(hotPink, lightBlue, hue);
+            color = mix(color, cyan, sin(hue * 3.14159 + time * 0.1) * 0.5 + 0.5);
             
             // Add ring bands with gaps
             float ringPattern = sin(dist * 0.8) * 0.5 + 0.5;
@@ -210,37 +222,50 @@ const SaturnNebula = () => {
             // Add the Cassini Division (gap)
             float cassiniDiv = smoothstep(53.0, 54.0, dist) * smoothstep(56.0, 55.0, dist);
             
-            // Mix rainbow colors with pattern
-            vec3 color = rainbow * (0.7 + ringPattern * 0.3);
+            // Mix colors with pattern
+            color = color * (0.8 + ringPattern * 0.4);
             
-            // Add transparency variations
-            float alpha = 0.7 + ringPattern * 0.3;
+            // Add transparency variations - more transparent, ghostly
+            float alpha = 0.3 + ringPattern * 0.25;
             alpha *= cassiniDiv; // Make the gap more visible
             alpha *= smoothstep(40.0, 42.0, dist); // Fade at inner edge
             alpha *= smoothstep(70.0, 68.0, dist); // Fade at outer edge
             
-            // Add some shimmer
-            float shimmer = sin(dist * 10.0 + time) * 0.1 + 0.9;
+            // Add ethereal shimmer and glow
+            float shimmer = sin(dist * 10.0 + time) * 0.15 + 0.85;
             color *= shimmer;
+            
+            // Add ghostly edge glow
+            color += vec3(0.2, 0.3, 0.5) * (1.0 - alpha) * 0.3;
             
             gl_FragColor = vec4(color, alpha);
           }
-        `,
-        transparent: true,
-        side: THREE.DoubleSide,
-        depthWrite: false
+        `
       });
       
-      const rings = new THREE.Mesh(ringGeometry, ringMaterial);
-      rings.rotation.x = Math.PI / 2.5; // Tilt the rings
-      saturnGroup.add(rings);
+      // Create back half of rings (behind planet)
+      const ringsBack = new THREE.Mesh(ringGeometry, ringMaterial);
+      ringsBack.rotation.x = Math.PI / 2.5;
+      ringsBack.renderOrder = 0; // Render first (behind planet)
+      saturnGroup.add(ringsBack);
+      
+      const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+      planet.renderOrder = 1;
+      saturnGroup.add(planet);
+      
+      // Create front half of rings (in front of planet)
+      const ringMaterialFront = ringMaterial.clone();
+      const ringsFront = new THREE.Mesh(ringGeometry.clone(), ringMaterialFront);
+      ringsFront.rotation.x = Math.PI / 2.5;
+      ringsFront.renderOrder = 2; // Render last (in front of planet)
+      saturnGroup.add(ringsFront);
       
       // Position Saturn in the center but slightly back
       saturnGroup.position.set(0, 0, -50);
       saturnGroup.renderOrder = 1; // Render before stars
       scene.add(saturnGroup);
       
-      return { saturnGroup, planetMaterial, ringMaterial };
+      return { saturnGroup, planetMaterial, ringMaterial, ringMaterialFront };
     }
 
     // ==================== POINTY STAR SYSTEM ====================
@@ -836,6 +861,7 @@ const SaturnNebula = () => {
       saturn.saturnGroup.rotation.y += delta * 0.15;
       saturn.planetMaterial.uniforms.time.value = time;
       saturn.ringMaterial.uniforms.time.value = time;
+      saturn.ringMaterialFront.uniforms.time.value = time;
       
       scrollSparkle *= 0.92;
       if (scrollSparkle < 0.01) scrollSparkle = 0;
