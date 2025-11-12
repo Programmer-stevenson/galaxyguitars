@@ -68,7 +68,7 @@ function App() {
 
   return (
     <div className="app">
-      <NebulaBackground />
+      <SaturnNebula />
       
       {/* Navigation */}
       <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
@@ -106,7 +106,7 @@ function App() {
         {mobileMenuOpen && (
           <div className="mobile-nav-menu">
             <div className="mobile-nav-nebula">
-              <SaturnNebula/>
+              <NebulaBackground/>
             </div>
             <div className="mobile-nav-content">
               {/* Logo at top with nebula glow and bounce */}
