@@ -117,6 +117,7 @@ function App() {
         {/* Mobile Navigation Menu with Space Theme */}
         {mobileMenuOpen && (
           <div className="mobile-nav-menu">
+            <SaturnNebula />
             {/* Space Background with Stars */}
             <div className="space-background">
               {/* Generate multiple sparkling stars */}
